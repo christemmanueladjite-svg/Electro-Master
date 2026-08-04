@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ElectroMaster — Atelier de simulation électronique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a1220;
+  --bg-panel:#0f1b30;
+  --bg-card:#132238;
+  --bg-card-hover:#17293f;
+  --border:#22344f;
+  --border-bright:#32506f;
+  --copper:#c97c3d;
+  --copper-bright:#e79860;
+  --cyan:#5fd8cf;
+  --cyan-dim:#3a7d78;
+  --amber:#f2b84b;
+  --text:#e8eef7;
+  --text-dim:#8ea3c2;
+  --text-faint:#5a7191;
+  --danger:#e6614f;
+  --success:#6fcf7d;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    /* Halo lumineux futuriste */
+    radial-gradient(circle at 15% 15%, rgba(95,216,207,0.12) 0, transparent 28%),
+    radial-gradient(circle at 85% 80%, rgba(201,124,61,0.10) 0, transparent 30%),
+
+    /* Pistes horizontales du circuit imprimé */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 47px,
+      rgba(95,216,207,0.055) 48px,
+      transparent 49px,
+      transparent 96px
+    ),
+
+    /* Pistes verticales */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 47px,
+      rgba(95,216,207,0.055) 48px,
+      transparent 49px,
+      transparent 96px
+    ),
+
+    /* Grille fine */
+    repeating-linear-gradient(
+      90deg,
+      rgba(95,216,207,0.025) 0px,
+      rgba(95,216,207,0.025) 1px,
+      transparent 1px,
+      transparent 16px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(95,216,207,0.025) 0px,
+      rgba(95,216,207,0.025) 1px,
+      transparent 1px,
+      transparent 16px
+    ),
+
+    /* Fond profond */
+    linear-gradient(135deg, #050b14 0%, #081525 45%, #030912 100%);
+
+  color:var(--text);
+  font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+
+/* Couche décorative : nœuds et pistes de circuit imprimé */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:-1;
+  opacity:.75;
+
+  background:
+    radial-gradient(circle at 8% 22%, var(--cyan) 0 2px, transparent 3px),
+    radial-gradient(circle at 8% 22%, transparent 0 10px, rgba(95,216,207,.10) 11px, transparent 12px),
+    radial-gradient(circle at 78% 18%, var(--cyan) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 18%, transparent 0 13px, rgba(95,216,207,.08) 14px, transparent 15px),
+    radial-gradient(circle at 91% 72%, var(--copper) 0 2px, transparent 3px),
+    radial-gradient(circle at 91% 72%, transparent 0 11px, rgba(201,124,61,.08) 12px, transparent 13px),
+    linear-gradient(90deg, transparent 0 7%, rgba(95,216,207,.06) 7% 7.15%, transparent 7.15% 100%),
+    linear-gradient(0deg, transparent 0 22%, rgba(95,216,207,.06) 22% 22.15%, transparent 22.15% 100%);
+
+  background-size:auto;
+}
+
+/* Petites particules lumineuses */
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:-1;
+  background:
+    radial-gradient(circle at 20% 70%, rgba(95,216,207,.10) 0 1px, transparent 2px),
+    radial-gradient(circle at 45% 30%, rgba(95,216,207,.08) 0 1px, transparent 2px),
+    radial-gradient(circle at 65% 82%, rgba(201,124,61,.08) 0 1px, transparent 2px),
+    radial-gradient(circle at 86% 42%, rgba(95,216,207,.08) 0 1px, transparent 2px);
+  background-size:180px 180px, 220px 220px, 260px 260px, 200px 200px;
+}
+.mono{font-family:'JetBrains Mono',monospace;}
+.display{font-family:'Space Grotesk',sans-serif;}
+
+#app{max-width:1180px;margin:0 auto;padding:20px 20px 80px;}
+
+/* HEADER */
+header.top{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+  padding:16px 20px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:linear-gradient(180deg, var(--bg-panel), var(--bg-card));
+  margin-bottom:22px;
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand svg{width:38px;height:38px;color:var(--cyan);}
+.brand h1{font-size:22px;margin:0;letter-spacing:0.5px;}
+.brand p{margin:0;color:var(--text-dim);font-size:12.5px;}
+.stats{display:flex;align-items:center;gap:18px;}
+.xp-block{display:flex;flex-direction:column;gap:5px;min-width:190px;}
+.xp-top{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-dim);}
+.xp-bar{height:7px;border-radius:5px;background:#0c1729;border:1px solid var(--border);overflow:hidden;}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--cyan-dim),var(--cyan));transition:width .4s ease;}
+.badge-count{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--amber);border:1px solid var(--border);padding:6px 10px;border-radius:8px;background:#0c1729;}
+
+/* NAV BREADCRUMB */
+.crumb{display:flex;align-items:center;gap:8px;margin-bottom:16px;color:var(--text-dim);font-size:13px;}
+.crumb button{
+  background:none;border:1px solid var(--border);color:var(--cyan);
+  padding:6px 12px;border-radius:7px;cursor:pointer;font-family:'Inter';font-size:13px;
+}
+.crumb button:hover{border-color:var(--cyan);background:rgba(95,216,207,0.06);}
+
+/* BENCH GRID */
+.bench-intro{margin-bottom:18px;}
+.bench-intro h2{font-size:19px;margin:0 0 6px;}
+.bench-intro p{color:var(--text-dim);font-size:14px;margin:0;max-width:640px;line-height:1.5;}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:18px;}
+.card{
+  border:1px solid var(--border);background:var(--bg-card);
+  border-radius:var(--radius);padding:16px;cursor:pointer;
+  transition:all .15s ease;position:relative;overflow:hidden;
+}
+.card:hover{border-color:var(--copper);background:var(--bg-card-hover);transform:translateY(-2px);}
+.card .cat{
+  position:absolute;top:12px;right:12px;font-size:9.5px;letter-spacing:0.6px;text-transform:uppercase;
+  color:var(--text-faint);border:1px solid var(--border);padding:2px 6px;border-radius:5px;
+}
+.card svg{width:64px;height:44px;display:block;margin-bottom:10px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4));}
+.card h3{font-size:15px;margin:0 0 3px;}
+.card .done{
+  position:absolute;bottom:12px;right:12px;color:var(--success);font-size:16px;
+}
+
+/* DETAIL VIEW */
+.detail{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:880px){.detail{grid-template-columns:1fr;}}
+.panel{
+  border:1px solid var(--border);background:var(--bg-panel);
+  border-radius:var(--radius);padding:22px;
+}
+.panel h2{margin:0 0 4px;font-size:22px;}
+.panel .cat-tag{color:var(--copper-bright);font-size:12px;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:14px;display:inline-block;}
+.symbol-box{
+  display:flex;align-items:center;justify-content:center;
+  background:#081120;border:1px solid var(--border);border-radius:8px;
+  padding:20px;margin-bottom:16px;
+}
+.symbol-box svg{width:150px;height:110px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5));}
+.audio-player{
+  display:flex;align-items:center;gap:10px;
+  background:#081120;border:1px solid var(--border-bright);border-radius:8px;
+  padding:10px 12px;margin-bottom:16px;
+}
+.audio-btn{
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--cyan-dim);
+  background:linear-gradient(180deg,var(--cyan),var(--cyan-dim));color:#04201d;
+  font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:transform .12s ease,filter .12s ease;flex-shrink:0;
+}
+.audio-btn:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.audio-btn.ghost{background:transparent;color:var(--text-dim);border-color:var(--border-bright);}
+.audio-btn.ghost:hover{color:var(--text);border-color:var(--copper);}
+.audio-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+.audio-label{font-size:12.5px;color:var(--text-dim);}
+.audio-bars{display:flex;align-items:flex-end;gap:3px;height:14px;}
+.audio-bars span{width:3px;height:4px;background:var(--cyan-dim);border-radius:2px;transition:height .15s ease;}
+.audio-bars.active span{background:var(--cyan);animation:audioBar 0.9s ease-in-out infinite;}
+.audio-bars.active span:nth-child(1){animation-delay:0s;}
+.audio-bars.active span:nth-child(2){animation-delay:.12s;}
+.audio-bars.active span:nth-child(3){animation-delay:.24s;}
+.audio-bars.active span:nth-child(4){animation-delay:.36s;}
+.audio-bars.active span:nth-child(5){animation-delay:.48s;}
+@keyframes audioBar{0%,100%{height:4px;}50%{height:14px;}}
+.audio-rate{
+  background:var(--bg-card);color:var(--text-dim);border:1px solid var(--border-bright);
+  border-radius:5px;font-size:11.5px;padding:4px 6px;flex-shrink:0;
+}
+.theory{color:#cddbee;font-size:14.5px;line-height:1.65;margin-bottom:14px;border-radius:6px;transition:background .2s ease,box-shadow .2s ease;}
+.theory.reading{background:rgba(95,216,207,0.06);box-shadow:0 0 0 1px rgba(95,216,207,0.25) inset;padding:8px 10px;margin-left:-10px;margin-right:-10px;}
+.formula-box{
+  background:#081120;border:1px solid var(--border-bright);border-left:3px solid var(--amber);
+  border-radius:6px;padding:12px 14px;margin-bottom:14px;
+}
+.formula-box .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.formula-box .expr{font-size:17px;color:var(--amber);}
+.uses{margin-bottom:14px;}
+.uses .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.uses ul{margin:0;padding-left:18px;color:#cddbee;font-size:14px;line-height:1.6;}
+.tip{
+  background:rgba(95,216,207,0.06);border:1px solid var(--cyan-dim);border-radius:6px;
+  padding:10px 12px;font-size:13px;color:var(--cyan);
+}
+
+/* SIM PANEL */
+.sim-panel h3{margin:0 0 12px;font-size:15px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+.controls{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;}
+.control{display:flex;flex-direction:column;gap:5px;}
+.control label{font-size:12.5px;color:var(--text-dim);display:flex;justify-content:space-between;}
+.control label .val{color:var(--cyan);font-family:'JetBrains Mono';}
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:5px;border-radius:5px;
+  background:#0c1729;border:1px solid var(--border);
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--cyan);cursor:pointer;border:2px solid #04202099;
+}
+select{
+  background:#0c1729;color:var(--text);border:1px solid var(--border);
+  padding:7px 9px;border-radius:6px;font-family:'Inter';font-size:13px;
+}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;}
+button.act{
+  background:linear-gradient(180deg,var(--copper-bright),var(--copper));
+  color:#1a1005;border:none;padding:8px 14px;border-radius:7px;
+  font-weight:600;font-size:13px;cursor:pointer;
+}
+button.act:hover{filter:brightness(1.08);}
+button.ghost{
+  background:none;border:1px solid var(--border);color:var(--text);
+  padding:8px 14px;border-radius:7px;cursor:pointer;font-size:13px;
+}
+button.ghost:hover{border-color:var(--cyan);}
+.toggle-sw{
+  display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;
+  border:1px solid var(--border);padding:8px 12px;border-radius:8px;background:#0c1729;
+}
+.toggle-sw .dot{width:12px;height:12px;border-radius:50%;background:var(--text-faint);transition:.2s;}
+.toggle-sw.on .dot{background:var(--success);box-shadow:0 0 8px var(--success);}
+
+canvas{width:100%;background:#081120;border:1px solid var(--border);border-radius:8px;display:block;}
+.readout{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-top:12px;
+}
+.readout .rbox{
+  background:#081120;border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;text-align:center;
+}
+.readout .rbox .rl{font-size:10px;color:var(--text-faint);text-transform:uppercase;}
+.readout .rbox .rv{font-family:'JetBrains Mono';font-size:16px;color:var(--cyan);margin-top:2px;}
+
+/* QUIZ */
+.quiz{margin-top:18px;border-top:1px solid var(--border);padding-top:16px;}
+.quiz h3{font-size:14px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin:0 0 12px;}
+.qitem{margin-bottom:16px;}
+.qitem .qtext{font-size:14px;margin-bottom:8px;color:var(--text);}
+.qopts{display:flex;flex-direction:column;gap:6px;}
+.qopt{
+  text-align:left;background:#0c1729;border:1px solid var(--border);color:var(--text);
+  padding:9px 12px;border-radius:7px;cursor:pointer;font-size:13.5px;font-family:'Inter';
+}
+.qopt:hover{border-color:var(--border-bright);}
+.qopt.correct{border-color:var(--success);background:rgba(111,207,125,0.1);color:var(--success);}
+.qopt.wrong{border-color:var(--danger);background:rgba(230,97,79,0.1);color:var(--danger);}
+.qopt:disabled{cursor:default;}
+
+.truth-table{width:100%;border-collapse:collapse;margin-top:10px;font-family:'JetBrains Mono';font-size:12.5px;}
+.truth-table th,.truth-table td{border:1px solid var(--border);padding:5px 9px;text-align:center;}
+.truth-table th{color:var(--text-dim);font-weight:500;}
+.truth-table tr.active td{background:rgba(95,216,207,0.12);color:var(--cyan);}
+
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--bg-card);border:1px solid var(--cyan);color:var(--cyan);
+  padding:10px 18px;border-radius:8px;font-size:13.5px;opacity:0;pointer-events:none;
+  transition:all .3s ease;z-index:50;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" stroke-linejoin="round"/></svg>
+      <div>
+        <h1 class="display">ElectroMaster</h1>
+        <p>Atelier de simulation &amp; cours d'électronique</p>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="xp-block">
+        <div class="xp-top"><span id="lvlLabel">Niveau 1</span><span id="xpLabel" class="mono">0 XP</span></div>
+        <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      </div>
+      <div class="badge-count"><span>🏅</span><span id="badgeLabel">0 / 15 composants maîtrisés</span></div>
+    </div>
+  </header>
+  <div id="view"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ ÉTAT GLOBAL ============ */
+const state = { xp:0, completed:new Set(), currentId:null };
+
+function addXp(n){
+  state.xp += n;
+  updateHeader();
+}
+function updateHeader(){
+  const lvl = Math.floor(state.xp/100)+1;
+  document.getElementById('lvlLabel').textContent = 'Niveau '+lvl;
+  document.getElementById('xpLabel').textContent = state.xp+' XP';
+  document.getElementById('xpFill').style.width = (state.xp%100)+'%';
+  document.getElementById('badgeLabel').textContent = state.completed.size+' / '+COMPONENTS.length+' composants maîtrisés';
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ============ ILLUSTRATIONS SEMI-RÉALISTES DES BOÎTIERS ============ */
+const SVG = {
+resistor:`<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-res-body" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#f1dcae"/><stop offset=".5" stop-color="#d3ac6c"/><stop offset="1" stop-color="#a3813f"/>
+</linearGradient></defs>
+<line x1="2" y1="30" x2="27" y2="30" stroke="#b7bfc9" stroke-width="3"/><line x1="73" y1="30" x2="98" y2="30" stroke="#b7bfc9" stroke-width="3"/>
+<rect x="27" y="16" width="46" height="28" rx="11" fill="url(#g-res-body)" stroke="#8a6c34" stroke-width="1"/>
+<rect x="27" y="16" width="46" height="9" rx="5" fill="#fff" opacity=".25"/>
+<rect x="35" y="16" width="4" height="28" fill="#5b3a29"/><rect x="43" y="16" width="4" height="28" fill="#1a1a1a"/>
+<rect x="51" y="16" width="4" height="28" fill="#c23b3b"/><rect x="65" y="16" width="4" height="28" fill="#d4af37"/>
+</svg>`,
+capacitor:`<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-cap-body" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#4a5b78"/><stop offset=".45" stop-color="#1a2740"/><stop offset="1" stop-color="#0b1420"/>
+</linearGradient></defs>
+<line x1="38" y1="46" x2="38" y2="58" stroke="#b7bfc9" stroke-width="3"/><line x1="62" y1="46" x2="62" y2="58" stroke="#b7bfc9" stroke-width="3"/>
+<rect x="26" y="4" width="48" height="44" rx="7" fill="url(#g-cap-body)" stroke="#050a12" stroke-width="1"/>
+<rect x="26" y="4" width="48" height="10" rx="5" fill="#fff" opacity=".15"/>
+<rect x="45" y="8" width="10" height="36" fill="#eef1f5" opacity=".85"/>
+<text x="50" y="18" text-anchor="middle" font-size="11" fill="#0b1420" font-family="sans-serif">−</text>
+<text x="50" y="30" text-anchor="middle" font-size="11" fill="#0b1420" font-family="sans-serif">−</text>
+<text x="50" y="42" text-anchor="middle" font-size="11" fill="#0b1420" font-family="sans-serif">−</text>
+</svg>`,
+inductor:`<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+<defs><radialGradient id="g-ind-core" cx="35%" cy="30%" r="75%">
+<stop offset="0" stop-color="#9a6a44"/><stop offset="1" stop-color="#432a18"/>
+</radialGradient></defs>
+<line x1="2" y1="42" x2="28" y2="42" stroke="#d99a4a" stroke-width="3"/><line x1="72" y1="42" x2="98" y2="42" stroke="#d99a4a" stroke-width="3"/>
+<ellipse cx="50" cy="30" rx="32" ry="18" fill="url(#g-ind-core)" stroke="#2e1c10" stroke-width="1"/>
+<ellipse cx="50" cy="30" rx="13" ry="7" fill="#0a1220"/>
+<g fill="none" stroke="#e39a4c" stroke-width="3" stroke-linecap="round">
+<path d="M22 32a30 15 0 0 1 5-14"/><path d="M32 42a30 15 0 0 1 -9-11"/><path d="M44 45a30 15 0 0 1 -12-5"/>
+<path d="M56 45a30 15 0 0 1 12-5"/><path d="M68 42a30 15 0 0 1 9-11"/><path d="M78 32a30 15 0 0 1 -5-14"/>
+</g>
+</svg>`,
+diode:`<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-dio-body" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#3c3c3c"/><stop offset=".5" stop-color="#141414"/><stop offset="1" stop-color="#040404"/>
+</linearGradient></defs>
+<line x1="2" y1="30" x2="27" y2="30" stroke="#b7bfc9" stroke-width="3"/><line x1="73" y1="30" x2="98" y2="30" stroke="#b7bfc9" stroke-width="3"/>
+<rect x="27" y="16" width="46" height="28" rx="6" fill="url(#g-dio-body)" stroke="#000" stroke-width="1"/>
+<rect x="27" y="16" width="46" height="8" rx="4" fill="#fff" opacity=".12"/>
+<rect x="61" y="16" width="6" height="28" fill="#dde2e8"/>
+</svg>`,
+led:`<svg viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+<defs><radialGradient id="g-led-dome" cx="35%" cy="28%" r="75%">
+<stop offset="0" stop-color="#ffb2a3"/><stop offset=".45" stop-color="#e6392f"/><stop offset="1" stop-color="#7d130d"/>
+</radialGradient></defs>
+<line x1="38" y1="60" x2="38" y2="70" stroke="#b7bfc9" stroke-width="3"/><line x1="58" y1="52" x2="58" y2="70" stroke="#b7bfc9" stroke-width="3"/>
+<rect x="26" y="34" width="44" height="15" fill="#c94f3f" stroke="#7d130d" stroke-width="1"/>
+<path d="M26 34a22 22 0 0 1 44 0z" fill="url(#g-led-dome)" stroke="#7d130d" stroke-width="1"/>
+<ellipse cx="37" cy="25" rx="6" ry="4" fill="#fff" opacity=".6"/>
+</svg>`,
+bjt:`<svg viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-bjt-body" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#404040"/><stop offset="1" stop-color="#0d0d0d"/>
+</linearGradient></defs>
+<path d="M30 20a20 20 0 0 1 40 0v26a20 20 0 0 1 -40 0z" fill="url(#g-bjt-body)" stroke="#000" stroke-width="1"/>
+<rect x="30" y="6" width="40" height="16" rx="2" fill="#1a1a1a"/>
+<ellipse cx="50" cy="30" rx="17" ry="14" fill="#fff" opacity=".06"/>
+<line x1="38" y1="66" x2="38" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+<line x1="50" y1="66" x2="50" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+<line x1="62" y1="66" x2="62" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+</svg>`,
+mosfet:`<svg viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-mos-body" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#333"/><stop offset="1" stop-color="#0a0a0a"/>
+</linearGradient><linearGradient id="g-mos-tab" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#e6eaef"/><stop offset="1" stop-color="#98a2ae"/>
+</linearGradient></defs>
+<rect x="26" y="4" width="34" height="14" rx="2" fill="url(#g-mos-tab)" stroke="#6b7480" stroke-width="1"/>
+<circle cx="43" cy="11" r="3" fill="#0a1220"/>
+<rect x="24" y="16" width="52" height="44" rx="4" fill="url(#g-mos-body)" stroke="#000" stroke-width="1"/>
+<rect x="24" y="16" width="52" height="10" fill="#fff" opacity=".08"/>
+<line x1="34" y1="60" x2="34" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+<line x1="50" y1="60" x2="50" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+<line x1="66" y1="60" x2="66" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+</svg>`,
+thyristor:`<svg viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-thy-body" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#333"/><stop offset="1" stop-color="#0a0a0a"/>
+</linearGradient><linearGradient id="g-thy-tab" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#e6eaef"/><stop offset="1" stop-color="#98a2ae"/>
+</linearGradient></defs>
+<rect x="26" y="4" width="34" height="14" rx="2" fill="url(#g-thy-tab)" stroke="#6b7480" stroke-width="1"/>
+<circle cx="43" cy="11" r="3" fill="#0a1220"/>
+<rect x="24" y="16" width="52" height="44" rx="4" fill="url(#g-thy-body)" stroke="#000" stroke-width="1"/>
+<path d="M34 30l14 8-6 4 12 8" fill="none" stroke="#e39a4c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="34" y1="60" x2="34" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+<line x1="50" y1="60" x2="50" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+<line x1="66" y1="60" x2="66" y2="86" stroke="#b7bfc9" stroke-width="3"/>
+</svg>`,
+logic:`<svg viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-ic-body" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#2e2e2e"/><stop offset="1" stop-color="#0a0a0a"/>
+</linearGradient></defs>
+<rect x="20" y="10" width="60" height="50" rx="3" fill="url(#g-ic-body)" stroke="#000" stroke-width="1"/>
+<rect x="20" y="10" width="60" height="12" fill="#fff" opacity=".07"/>
+<path d="M44 10a6 6 0 0 0 12 0" fill="#0a0a0a" stroke="#000"/>
+<circle cx="28" cy="18" r="2" fill="#c9a53a"/>
+<g stroke="#c7ccd3" stroke-width="3.5">
+<line x1="8" y1="18" x2="20" y2="18"/><line x1="8" y1="30" x2="20" y2="30"/><line x1="8" y1="42" x2="20" y2="42"/><line x1="8" y1="54" x2="20" y2="54"/>
+<line x1="80" y1="18" x2="92" y2="18"/><line x1="80" y1="30" x2="92" y2="30"/><line x1="80" y1="42" x2="92" y2="42"/><line x1="80" y1="54" x2="92" y2="54"/>
+</g>
+</svg>`,
+pot:`<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+<defs><radialGradient id="g-pot-body" cx="35%" cy="30%" r="75%">
+<stop offset="0" stop-color="#c3ccd6"/><stop offset="1" stop-color="#5c6772"/>
+</radialGradient></defs>
+<circle cx="50" cy="25" r="22" fill="url(#g-pot-body)" stroke="#333" stroke-width="1"/>
+<circle cx="50" cy="25" r="9" fill="#2b2f36"/>
+<line x1="50" y1="25" x2="50" y2="10" stroke="#e8b93a" stroke-width="3" stroke-linecap="round"/>
+<g stroke="#b7bfc9" stroke-width="3"><line x1="30" y1="52" x2="30" y2="58"/><line x1="50" y1="52" x2="50" y2="58"/><line x1="70" y1="52" x2="70" y2="58"/></g>
+</svg>`,
+relay:`<svg viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-rel-body" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#5c85d6"/><stop offset="1" stop-color="#243d75"/>
+</linearGradient></defs>
+<rect x="14" y="8" width="72" height="44" rx="4" fill="url(#g-rel-body)" stroke="#1c2e57" stroke-width="1"/>
+<rect x="14" y="8" width="72" height="10" fill="#fff" opacity=".12"/>
+<rect x="22" y="16" width="56" height="20" rx="2" fill="#1c2e57" opacity=".4"/>
+<g stroke="#c7ccd3" stroke-width="3"><line x1="24" y1="52" x2="24" y2="64"/><line x1="38" y1="52" x2="38" y2="64"/><line x1="62" y1="52" x2="62" y2="64"/><line x1="76" y1="52" x2="76" y2="64"/></g>
+</svg>`,
+fuse:`<svg viewBox="0 0 100 40" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-fuse-cap" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#e6eaef"/><stop offset="1" stop-color="#8b95a1"/>
+</linearGradient></defs>
+<line x1="2" y1="20" x2="22" y2="20" stroke="#b7bfc9" stroke-width="3"/><line x1="78" y1="20" x2="98" y2="20" stroke="#b7bfc9" stroke-width="3"/>
+<rect x="22" y="6" width="12" height="28" rx="2" fill="url(#g-fuse-cap)"/><rect x="66" y="6" width="12" height="28" rx="2" fill="url(#g-fuse-cap)"/>
+<rect x="34" y="10" width="32" height="20" rx="3" fill="#dce9ec" opacity=".3" stroke="#8fa5aa" stroke-width="1"/>
+<line x1="34" y1="20" x2="66" y2="20" stroke="#c9a53a" stroke-width="1.5"/>
+</svg>`,
+battery:`<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-batt-body" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#3a3a3a"/><stop offset=".5" stop-color="#1c1c1c"/><stop offset="1" stop-color="#050505"/>
+</linearGradient></defs>
+<line x1="2" y1="25" x2="14" y2="25" stroke="#b7bfc9" stroke-width="3"/><line x1="84" y1="25" x2="98" y2="25" stroke="#b7bfc9" stroke-width="3"/>
+<rect x="14" y="12" width="66" height="26" rx="4" fill="url(#g-batt-body)" stroke="#000" stroke-width="1"/>
+<rect x="14" y="12" width="24" height="26" fill="#3aa564" opacity=".9"/>
+<rect x="14" y="12" width="66" height="8" fill="#fff" opacity=".08"/>
+<rect x="76" y="18" width="8" height="14" rx="2" fill="#c9c9c9"/>
+</svg>`,
+switch:`<svg viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-sw-base" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#2e2e2e"/><stop offset="1" stop-color="#0a0a0a"/>
+</linearGradient></defs>
+<rect x="20" y="24" width="60" height="18" rx="3" fill="url(#g-sw-base)" stroke="#000" stroke-width="1"/>
+<line x1="4" y1="33" x2="20" y2="33" stroke="#b7bfc9" stroke-width="3"/><line x1="80" y1="33" x2="96" y2="33" stroke="#b7bfc9" stroke-width="3"/>
+<circle cx="35" cy="33" r="4" fill="#c9c9c9"/>
+<line x1="35" y1="33" x2="58" y2="14" stroke="#d5d9de" stroke-width="4" stroke-linecap="round"/>
+<circle cx="58" cy="14" r="4" fill="#e8ebee"/>
+</svg>`,
+quartz:`<svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="g-qz-body" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#eef1f4"/><stop offset=".5" stop-color="#aeb7c1"/><stop offset="1" stop-color="#6b7480"/>
+</linearGradient></defs>
+<rect x="26" y="10" width="48" height="34" rx="4" fill="url(#g-qz-body)" stroke="#4a5158" stroke-width="1"/>
+<rect x="30" y="15" width="40" height="5" fill="#fff" opacity=".5"/>
+<line x1="38" y1="44" x2="38" y2="56" stroke="#b7bfc9" stroke-width="3"/><line x1="62" y1="44" x2="62" y2="56" stroke="#b7bfc9" stroke-width="3"/>
+</svg>`,
+};
+
+/* ============ DONNÉES COMPOSANTS ============ */
+const COMPONENTS = [
+{id:'resistor',name:'Résistance',cat:'Passif',simType:'ohm',
+ theory:"La résistance s'oppose au passage du courant électrique et transforme une partie de l'énergie électrique en chaleur. Sa valeur s'exprime en ohms (Ω). Plus la résistance est grande, plus le courant qui la traverse pour une même tension est faible. Sa valeur est souvent indiquée par un code de 4 anneaux de couleur imprimés sur le corps du composant.",
+ formula:"U = R × I &nbsp;&nbsp;(loi d'Ohm)",
+ uses:["Limiter un courant (protection d'une LED, d'un transistor…)","Diviser une tension (pont diviseur)","Créer un point de référence (pull-up / pull-down)","Dissiper de l'énergie de façon contrôlée"],
+ tip:"Astuce : pour calculer la résistance série à placer devant une LED, utilise R = (Valimentation − Vled) / Iled.",
+ quiz:[
+  {q:"Que dit la loi d'Ohm ?",opts:["U = R × I","I = R × U","R = U + I","U = R / I"],a:0},
+  {q:"Si R augmente et U reste fixe, le courant I…",opts:["augmente","diminue","reste identique","devient négatif"],a:1}
+ ]},
+
+{id:'capacitor',name:'Condensateur',cat:'Passif',simType:'rc',
+ theory:"Le condensateur stocke de l'énergie électrique sous forme de charge entre deux armatures séparées par un isolant (diélectrique). Sa capacité se mesure en farads (F), le plus souvent en µF, nF ou pF dans les montages réels. Associé à une résistance, il forme un circuit RC dont le temps de charge dépend de la constante de temps τ = R × C.",
+ formula:"τ = R × C &nbsp;&nbsp;(constante de temps)",
+ uses:["Filtrage et lissage d'une tension (alimentations)","Découplage / stabilisation d'une alimentation logique","Temporisation dans un circuit RC","Stockage temporaire d'énergie (flash, filtrage audio)"],
+ tip:"Astuce : après 5×τ, le condensateur est considéré comme totalement chargé (>99%).",
+ quiz:[
+  {q:"L'unité de la capacité est…",opts:["l'ohm","le farad","le henry","le volt"],a:1},
+  {q:"Une constante de temps τ = R×C plus grande signifie…",opts:["une charge plus rapide","une charge plus lente","aucun effet sur la charge","une décharge instantanée"],a:1}
+ ]},
+
+{id:'inductor',name:'Bobine (inductance)',cat:'Passif',simType:'rl',
+ theory:"La bobine (ou inductance) s'oppose aux variations brusques du courant en stockant de l'énergie dans un champ magnétique. Son unité est le henry (H). Dans un circuit RL, le courant croît progressivement selon une constante de temps τ = L / R, à l'inverse d'une résistance seule où le courant serait instantané.",
+ formula:"τ = L / R",
+ uses:["Filtrage des hautes fréquences","Stockage d'énergie dans les convertisseurs (hacheurs)","Bobinages de transformateurs et moteurs","Suppression de parasites (self de choc)"],
+ tip:"Astuce : une bobine s'oppose à une variation de courant, alors qu'un condensateur s'oppose à une variation de tension — ils sont complémentaires.",
+ quiz:[
+  {q:"L'unité de l'inductance est…",opts:["le farad","l'ampère","le henry","l'ohm"],a:2},
+  {q:"Dans un circuit RL, le courant à la mise sous tension…",opts:["monte instantanément","monte progressivement","reste nul","oscille sans fin"],a:1}
+ ]},
+
+{id:'diode',name:'Diode',cat:'Semi-conducteur',simType:'diode',
+ theory:"La diode ne laisse passer le courant que dans un seul sens : le sens direct (anode vers cathode). Il faut environ 0,7 V (silicium) pour qu'elle conduise. Dans le sens inverse, elle bloque le courant (jusqu'à sa tension de claquage). Cette propriété est utilisée pour redresser un courant alternatif en courant continu.",
+ formula:"Vseuil ≈ 0,7 V (Si) &nbsp;/&nbsp; 0,3 V (Ge)",
+ uses:["Redressement du courant alternatif (alimentations)","Protection contre l'inversion de polarité","Détection de signaux radio","Écrêtage de surtensions"],
+ tip:"Astuce : le repère (anneau) sur le boîtier indique la cathode, à relier vers le pôle négatif pour laisser passer le courant.",
+ quiz:[
+  {q:"Une diode en silicium conduit à partir d'environ…",opts:["0,1 V","0,7 V","5 V","12 V"],a:1},
+  {q:"En sens inverse, une diode idéale…",opts:["laisse tout passer","bloque le courant","amplifie le courant","se détruit toujours"],a:1}
+ ]},
+
+{id:'led',name:'LED (diode électroluminescente)',cat:'Semi-conducteur',simType:'led',
+ theory:"La LED est une diode spéciale qui émet de la lumière lorsqu'elle est traversée par un courant dans le sens direct. Sa tension de seuil dépend de sa couleur (environ 1,8 V pour le rouge, jusqu'à 3,2 V pour le bleu/blanc). Elle doit toujours être protégée par une résistance série pour limiter son courant, sous peine de destruction quasi instantanée.",
+ formula:"R = (Valim − Vf) / If",
+ uses:["Voyants de signalisation","Éclairage basse consommation","Afficheurs et écrans","Transmission infrarouge (télécommandes)"],
+ tip:"Astuce : le courant typique d'une LED signalétique est 10 à 20 mA — au-delà elle chauffe et vieillit prématurément.",
+ quiz:[
+  {q:"Une LED doit toujours être associée à…",opts:["un condensateur","une résistance série","une bobine","rien du tout"],a:1},
+  {q:"La tension de seuil d'une LED dépend principalement…",opts:["de sa couleur","de sa taille","du fabricant uniquement","de la météo"],a:0}
+ ]},
+
+{id:'bjt',name:'Transistor bipolaire (NPN/PNP)',cat:'Semi-conducteur',simType:'bjt',
+ theory:"Le transistor bipolaire est commandé par un petit courant de base (Ib) qui contrôle un courant collecteur-émetteur bien plus grand (Ic), selon un facteur d'amplification β (gain en courant). En NPN, le courant conventionnel entre par le collecteur ; en PNP, la logique des polarités est inversée. C'est le composant clé de l'amplification et de la commutation électronique.",
+ formula:"Ic = β × Ib",
+ uses:["Amplification de signaux (audio, mesure)","Commutation (allumer une charge avec un petit signal)","Oscillateurs","Régulateurs de tension"],
+ tip:"Astuce : quand Ib devient trop grand, le transistor entre en saturation — Ic n'augmente plus, il est \"tout ou rien\" comme un interrupteur fermé.",
+ quiz:[
+  {q:"Que contrôle le courant de base Ib ?",opts:["la tension d'alimentation","le courant collecteur Ic","la couleur de la LED","la fréquence du secteur"],a:1},
+  {q:"β représente…",opts:["la tension de seuil","le gain en courant","la résistance interne","la capacité"],a:1}
+ ]},
+
+{id:'mosfet',name:'Transistor MOSFET',cat:'Semi-conducteur',simType:'mosfet',
+ theory:"Le MOSFET est commandé en tension (et non en courant comme le bipolaire) : une tension grille-source (Vgs) suffisante crée un canal conducteur entre drain et source. Il ne consomme quasiment aucun courant de commande en régime statique, ce qui en fait un excellent interrupteur électronique pour la commutation de puissance.",
+ formula:"Vgs > Vth ⇒ transistor passant",
+ uses:["Commutation de puissance (alimentations à découpage)","Commande de moteurs (ponts en H)","Interrupteurs électroniques basse consommation","Circuits logiques CMOS"],
+ tip:"Astuce : contrairement au bipolaire, le MOSFET ne consomme presque pas de courant de commande — idéal piloté par un microcontrôleur.",
+ quiz:[
+  {q:"Le MOSFET est principalement commandé par…",opts:["un courant","une tension","une fréquence","une résistance"],a:1},
+  {q:"Vth désigne…",opts:["la tension de seuil de conduction","la tension de claquage","le gain en courant","la capacité grille"],a:0}
+ ]},
+
+{id:'thyristor',name:'Thyristor',cat:'Semi-conducteur',simType:'thyristor',
+ theory:"Le thyristor est un interrupteur électronique qui s'amorce (devient passant) grâce à une brève impulsion sur sa gâchette, puis reste conducteur tout seul même si l'impulsion cesse — tant que le courant principal ne s'annule pas. Il faut couper l'alimentation ou annuler le courant pour le rebloquer. Il est très utilisé pour commander de fortes puissances.",
+ formula:"Amorçage : Ig>0 → maintien tant que I>Imaintien",
+ uses:["Gradateurs de lumière et de puissance","Démarrage progressif de moteurs","Redresseurs commandés","Protection contre les surtensions (crowbar)"],
+ tip:"Astuce : contrairement au transistor, la gâchette du thyristor n'a plus d'effet une fois le composant amorcé — c'est un comportement à \"mémoire\".",
+ quiz:[
+  {q:"Pour bloquer un thyristor déjà amorcé, il faut…",opts:["une nouvelle impulsion gâchette","couper le courant principal","augmenter la tension","rien, il se bloque seul"],a:1},
+  {q:"Le thyristor est surtout utilisé pour…",opts:["l'amplification audio","la commande de fortes puissances","le stockage de charge","le filtrage de fréquence"],a:1}
+ ]},
+
+{id:'logic',name:'Circuit intégré — Portes logiques',cat:'Circuit intégré',simType:'logic',
+ theory:"Un circuit intégré numérique regroupe des portes logiques qui combinent des entrées binaires (0 ou 1) pour produire une sortie selon une fonction précise : ET, OU, NON, NON-ET, OU-EXCLUSIF… Ces portes sont les briques de base de tous les systèmes numériques, des calculatrices aux microprocesseurs.",
+ formula:"S = A·B (ET) &nbsp;/&nbsp; S = A+B (OU) &nbsp;/&nbsp; S = Ā (NON)",
+ uses:["Construction de circuits logiques (compteurs, mémoires)","Décodage d'adresses","Systèmes de sécurité et verrouillage","Base des microprocesseurs et microcontrôleurs"],
+ tip:"Astuce : toute fonction logique, aussi complexe soit-elle, peut être construite uniquement avec des portes NON-ET (NAND).",
+ quiz:[
+  {q:"Une porte ET donne une sortie à 1 quand…",opts:["au moins une entrée est à 1","toutes les entrées sont à 1","aucune entrée n'est à 1","les entrées sont différentes"],a:1},
+  {q:"Une porte OU-EXCLUSIF (XOR) donne 1 quand…",opts:["les entrées sont identiques","les entrées sont différentes","toutes les entrées sont à 0","jamais"],a:1}
+ ]},
+
+{id:'pot',name:'Potentiomètre',cat:'Passif',simType:'pot',
+ theory:"Le potentiomètre est une résistance variable à trois bornes : en déplaçant son curseur (souvent par une molette ou un axe), on modifie la tension prélevée entre le curseur et une extrémité — c'est un diviseur de tension réglable manuellement.",
+ formula:"Vsortie = Valim × (position curseur %)",
+ uses:["Réglage de volume audio","Réglage de luminosité","Capteur de position (joystick)","Réglage de seuils dans un montage"],
+ tip:"Astuce : utilisé à seulement 2 bornes (curseur + une extrémité), le potentiomètre se comporte comme une résistance variable simple (rhéostat).",
+ quiz:[
+  {q:"Un potentiomètre possède…",opts:["2 bornes","3 bornes","4 bornes","aucune borne"],a:1},
+  {q:"Déplacer le curseur d'un potentiomètre modifie…",opts:["la fréquence du secteur","la tension prélevée","la couleur de la LED","le sens du courant"],a:1}
+ ]},
+
+{id:'relay',name:'Relais électromécanique',cat:'Électromécanique',simType:'relay',
+ theory:"Le relais utilise une bobine pour créer un champ magnétique qui attire une lame métallique et ferme (ou ouvre) un contact électrique. Il permet de commander un circuit de forte puissance (ex : 230 V) à partir d'un petit signal basse tension, tout en isolant électriquement les deux circuits.",
+ formula:"Circuit commande (bobine) ⟂ Circuit puissance (contact)",
+ uses:["Commande de charges de puissance (moteurs, lampes)","Isolation galvanique entre commande et puissance","Automatismes industriels","Domotique (allumage à distance)"],
+ tip:"Astuce : les deux circuits (bobine et contact) sont totalement isolés électriquement — seul le champ magnétique fait le lien.",
+ quiz:[
+  {q:"Le relais permet surtout de…",opts:["amplifier une tension","commander une forte puissance avec un faible signal","stocker de l'énergie","redresser un courant"],a:1},
+  {q:"Entre bobine et contact, il y a…",opts:["une liaison électrique directe","une isolation galvanique","aucune relation","un court-circuit permanent"],a:1}
+ ]},
+
+{id:'fuse',name:'Fusible',cat:'Protection',simType:'fuse',
+ theory:"Le fusible est un composant de protection sacrificiel : un fil calibré fond et coupe le circuit si le courant dépasse sa valeur nominale, protégeant ainsi le reste de l'installation contre les surintensités et courts-circuits. Une fois fondu, il doit être remplacé.",
+ formula:"I > Icalibre ⇒ fusion et coupure",
+ uses:["Protection des circuits contre les courts-circuits","Protection des appareils électroménagers","Protection des alimentations électroniques","Sécurité des installations électriques"],
+ tip:"Astuce : ne jamais remplacer un fusible par un calibre supérieur — cela supprime la protection prévue par le fabricant.",
+ quiz:[
+  {q:"Un fusible protège un circuit contre…",opts:["les basses tensions","les surintensités","les hautes fréquences","les faibles courants"],a:1},
+  {q:"Après avoir fondu, un fusible…",opts:["se répare seul","doit être remplacé","continue de fonctionner","augmente sa valeur"],a:1}
+ ]},
+
+{id:'battery',name:'Pile / Batterie',cat:'Source',simType:'battery',
+ theory:"La pile (ou batterie) transforme de l'énergie chimique en énergie électrique et fournit une tension continue. Associer des éléments en série augmente la tension totale ; les associer en parallèle augmente la capacité (autonomie) disponible, à tension égale.",
+ formula:"Série : Vtotal = ΣV &nbsp;&nbsp; Parallèle : Ctotal = ΣC",
+ uses:["Alimentation d'appareils portables","Alimentation de secours (onduleurs)","Véhicules électriques","Systèmes autonomes (panneaux solaires)"],
+ tip:"Astuce : ne jamais associer en parallèle des piles de tensions différentes — cela crée des courants de circulation dangereux.",
+ quiz:[
+  {q:"Associer des piles en série permet d'augmenter…",opts:["la tension totale","la capacité totale","le courant de court-circuit","rien"],a:0},
+  {q:"Associer des piles en parallèle (même tension) augmente…",opts:["la tension","la capacité (autonomie)","la fréquence","la résistance"],a:1}
+ ]},
+
+{id:'switch',name:'Interrupteur',cat:'Électromécanique',simType:'switch',
+ theory:"L'interrupteur est le composant le plus simple : il ouvre ou ferme manuellement un circuit électrique. Il existe en version bascule (reste dans sa position) ou poussoir (retour automatique). C'est la base de toute commande manuelle d'un circuit.",
+ formula:"Fermé : circuit continu &nbsp;/&nbsp; Ouvert : circuit coupé",
+ uses:["Allumage/extinction manuel d'un appareil","Interrupteurs de sécurité (fin de course)","Boutons poussoirs de commande","Sélecteurs de mode"],
+ tip:"Astuce : un interrupteur poussoir revient seul en position ouverte dès qu'on relâche la pression — utile pour les sonnettes ou reset.",
+ quiz:[
+  {q:"Un interrupteur ouvert laisse-t-il passer le courant ?",opts:["oui, toujours","non, le circuit est coupé","seulement en courant alternatif","seulement la nuit"],a:1},
+  {q:"Un bouton poussoir revient en position initiale…",opts:["jamais","automatiquement au relâchement","seulement si on le bascule","après 1 heure"],a:1}
+ ]},
+
+{id:'quartz',name:'Quartz (oscillateur à quartz)',cat:'Fréquence',simType:'quartz',
+ theory:"Le quartz utilise l'effet piézoélectrique : soumis à une tension, il vibre mécaniquement à une fréquence extrêmement stable et précise. Cette vibration est exploitée pour générer une horloge de référence dans les montres, microcontrôleurs et circuits numériques.",
+ formula:"f = fréquence de résonance du cristal (Hz)",
+ uses:["Horloge des microcontrôleurs et ordinateurs","Montres et horloges de précision","Synthèse de fréquence radio","Synchronisation de bus numériques"],
+ tip:"Astuce : la stabilité en fréquence d'un quartz est bien supérieure à celle d'un simple circuit RC — d'où son usage systématique pour les horloges précises.",
+ quiz:[
+  {q:"Le quartz fonctionne grâce à l'effet…",opts:["photoélectrique","piézoélectrique","thermoélectrique","magnétique"],a:1},
+  {q:"Le quartz est surtout utilisé pour…",opts:["stocker de l'énergie","générer une fréquence stable","amplifier un courant","protéger un circuit"],a:1}
+ ]},
+];
+
+/* ============ VUE : ÉTABLI (grille) ============ */
+function renderBench(){
+  stopAudio();
+  document.getElementById('view').innerHTML = `
+    <div class="bench-intro">
+      <h2 class="display">L'établi</h2>
+      <p>Choisis un composant pour découvrir son fonctionnement, expérimenter avec une simulation interactive, puis valider un petit quiz pour gagner de l'XP.</p>
+    </div>
+    <div class="grid" id="grid"></div>
+  `;
+  const grid = document.getElementById('grid');
+  COMPONENTS.forEach(c=>{
+    const div = document.createElement('div');
+    div.className='card';
+    div.innerHTML = `<span class="cat">${c.cat}</span>${SVG[c.simType==='ohm'?'resistor':c.simType==='rc'?'capacitor':c.simType==='rl'?'inductor':c.simType==='diode'?'diode':c.simType==='led'?'led':c.simType==='bjt'?'bjt':c.simType==='mosfet'?'mosfet':c.simType==='thyristor'?'thyristor':c.simType==='logic'?'logic':c.simType==='pot'?'pot':c.simType==='relay'?'relay':c.simType==='fuse'?'fuse':c.simType==='battery'?'battery':c.simType==='switch'?'switch':'quartz']}
+      <h3>${c.name}</h3>
+      ${state.completed.has(c.id)?'<span class="done">✔</span>':''}`;
+    div.onclick=()=>openComponent(c.id);
+    grid.appendChild(div);
+  });
+}
+
+/* ============ VUE : DÉTAIL COMPOSANT ============ */
+function openComponent(id){
+  stopAudio();
+  state.currentId=id;
+  const c = COMPONENTS.find(x=>x.id===id);
+  document.getElementById('view').innerHTML = `
+    <div class="crumb"><button id="backBtn">← Retour à l'établi</button><span>/</span><span>${c.name}</span></div>
+    <div class="detail">
+      <div class="panel">
+        <span class="cat-tag">${c.cat}</span>
+        <h2 class="display">${c.name}</h2>
+        <div class="symbol-box">${SVG[c.id==='resistor'?'resistor':c.id==='capacitor'?'capacitor':c.id==='inductor'?'inductor':c.id==='diode'?'diode':c.id==='led'?'led':c.id==='bjt'?'bjt':c.id==='mosfet'?'mosfet':c.id==='thyristor'?'thyristor':c.id==='logic'?'logic':c.id==='pot'?'pot':c.id==='relay'?'relay':c.id==='fuse'?'fuse':c.id==='battery'?'battery':c.id==='switch'?'switch':'quartz']}</div>
+        <div class="audio-player" id="audioPlayer">
+          <button class="audio-btn" id="audioPlayBtn" title="Écouter l'explication" aria-label="Lecture">▶</button>
+          <button class="audio-btn ghost" id="audioStopBtn" title="Arrêter" aria-label="Arrêter">■</button>
+          <div class="audio-info">
+            <span class="audio-label" id="audioLabel">Écouter l'explication</span>
+            <div class="audio-bars" id="audioBars"><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
+          <select class="audio-rate" id="audioRate" title="Vitesse de lecture">
+            <option value="0.8">0.8×</option><option value="1" selected>1×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option>
+          </select>
+        </div>
+        <p class="theory" id="theoryText">${c.theory}</p>
+        <div class="formula-box"><div class="label">Formule clé</div><div class="expr mono">${c.formula}</div></div>
+        <div class="uses"><div class="label">Utilisations courantes</div><ul>${c.uses.map(u=>`<li>${u}</li>`).join('')}</ul></div>
+        <div class="tip">💡 ${c.tip}</div>
+      </div>
+      <div>
+        <div class="panel sim-panel">
+          <h3>Simulation interactive</h3>
+          <div class="controls" id="controls"></div>
+          <canvas id="simCanvas" width="480" height="220"></canvas>
+          <div class="readout" id="readout"></div>
+        </div>
+        <div class="panel quiz" style="margin-top:16px;">
+          <h3>Quiz — teste ta compréhension</h3>
+          <div id="quizBox"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('backBtn').onclick=renderBench;
+  document.getElementById('audioPlayBtn').onclick=()=>toggleAudio(c);
+  document.getElementById('audioStopBtn').onclick=stopAudio;
+  initSim(c);
+  renderQuiz(c);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ============ QUIZ ============ */
+function renderQuiz(c){
+  const box = document.getElementById('quizBox');
+  box.innerHTML='';
+  let correctCount=0;
+  c.quiz.forEach((qz,qi)=>{
+    const item=document.createElement('div');
+    item.className='qitem';
+    item.innerHTML=`<div class="qtext">${qi+1}. ${qz.q}</div><div class="qopts"></div>`;
+    const opts=item.querySelector('.qopts');
+    qz.opts.forEach((opt,oi)=>{
+      const b=document.createElement('button');
+      b.className='qopt';
+      b.textContent=opt;
+      b.onclick=()=>{
+        if(b.dataset.answered) return;
+        const all=opts.querySelectorAll('.qopt');
+        if(oi===qz.a){
+          b.classList.add('correct');
+          all.forEach(x=>x.dataset.answered='1');
+          addXp(15);
+          toast('✔ Bonne réponse ! +15 XP');
+          correctCount++;
+          checkCompletion();
+        }else{
+          b.classList.add('wrong');
+          toast('✘ Essaie encore');
+        }
+      };
+      opts.appendChild(b);
+    });
+    box.appendChild(item);
+  });
+  function checkCompletion(){
+    const allCorrect = [...box.querySelectorAll('.qitem')].every(it=>it.querySelector('.qopt.correct'));
+    if(allCorrect && !state.completed.has(c.id)){
+      state.completed.add(c.id);
+      addXp(10);
+      toast('🏅 Composant maîtrisé ! +10 XP bonus');
+    }
+  }
+}
+
+/* ============ LECTEUR AUDIO — SYNTHÈSE VOCALE DES EXPLICATIONS ============ */
+let audioState = 'stopped'; // 'stopped' | 'playing' | 'paused'
+if('speechSynthesis' in window){
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = ()=>window.speechSynthesis.getVoices();
+}
+function frenchVoice(){
+  if(!('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(v=>/^fr/i.test(v.lang)) || null;
+}
+function buildAudioText(c){
+  let txt = `${c.name}. ${c.theory}`;
+  if(c.uses && c.uses.length) txt += ` Utilisations courantes : ${c.uses.join('. ')}.`;
+  if(c.tip) txt += ` ${c.tip}`;
+  return txt;
+}
+function setAudioUI(newState){
+  audioState = newState;
+  const btn = document.getElementById('audioPlayBtn');
+  const label = document.getElementById('audioLabel');
+  const bars = document.getElementById('audioBars');
+  const theory = document.getElementById('theoryText');
+  if(!btn) return;
+  if(newState==='playing'){
+    btn.textContent='⏸'; btn.title='Mettre en pause';
+    label.textContent='Lecture en cours…';
+    bars.classList.add('active'); theory && theory.classList.add('reading');
+  }else if(newState==='paused'){
+    btn.textContent='▶'; btn.title='Reprendre';
+    label.textContent='En pause';
+    bars.classList.remove('active'); theory && theory.classList.remove('reading');
+  }else{
+    btn.textContent='▶'; btn.title="Écouter l'explication";
+    label.textContent="Écouter l'explication";
+    bars.classList.remove('active'); theory && theory.classList.remove('reading');
+  }
+}
+function toggleAudio(c){
+  if(!('speechSynthesis' in window)){
+    toast('🔇 Lecture vocale non prise en charge par ce navigateur');
+    return;
+  }
+  const synth = window.speechSynthesis;
+  if(audioState==='playing'){ synth.pause(); setAudioUI('paused'); return; }
+  if(audioState==='paused'){ synth.resume(); setAudioUI('playing'); return; }
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(buildAudioText(c));
+  const v = frenchVoice();
+  if(v) u.voice = v;
+  u.lang = 'fr-FR';
+  const rateSel = document.getElementById('audioRate');
+  u.rate = rateSel ? parseFloat(rateSel.value) : 1;
+  u.onend = ()=>setAudioUI('stopped');
+  u.onerror = ()=>setAudioUI('stopped');
+  synth.speak(u);
+  setAudioUI('playing');
+}
+function stopAudio(){
+  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  audioState='stopped';
+  setAudioUI('stopped');
+}
+
+/* ============ OUTILS CANVAS ============ */
+function ctxOf(){
+  const cv=document.getElementById('simCanvas');
+  const ctx=cv.getContext('2d');
+  return {cv,ctx};
+}
+function clear(ctx,cv){ ctx.clearRect(0,0,cv.width,cv.height); }
+function drawAxes(ctx,cv,pad){
+  ctx.strokeStyle='#22344f'; ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(pad,10); ctx.lineTo(pad,cv.height-pad); ctx.lineTo(cv.width-10,cv.height-pad);
+  ctx.stroke();
+}
+function readout(items){
+  document.getElementById('readout').innerHTML = items.map(i=>`<div class="rbox"><div class="rl">${i.l}</div><div class="rv mono">${i.v}</div></div>`).join('');
+}
+function mkControl(container,labelText,min,max,step,val,unit,onInput){
+  const wrap=document.createElement('div'); wrap.className='control';
+  wrap.innerHTML=`<label>${labelText} <span class="val">${val}${unit}</span></label>`;
+  const inp=document.createElement('input');
+  inp.type='range'; inp.min=min; inp.max=max; inp.step=step; inp.value=val;
+  inp.oninput=()=>{ wrap.querySelector('.val').textContent=inp.value+unit; onInput(parseFloat(inp.value)); };
+  wrap.appendChild(inp);
+  container.appendChild(wrap);
+  return inp;
+}
+function mkSelect(container,labelText,options,onChange){
+  const wrap=document.createElement('div'); wrap.className='control';
+  wrap.innerHTML=`<label>${labelText}</label>`;
+  const sel=document.createElement('select');
+  options.forEach(o=>{ const op=document.createElement('option'); op.value=o.v; op.textContent=o.l; sel.appendChild(op); });
+  sel.onchange=()=>onChange(sel.value);
+  wrap.appendChild(sel);
+  container.appendChild(wrap);
+  return sel;
+}
+function mkButtons(container,btns){
+  const wrap=document.createElement('div'); wrap.className='row-btns';
+  btns.forEach(b=>{
+    const el=document.createElement('button');
+    el.className=b.ghost?'ghost':'act';
+    el.textContent=b.label;
+    el.onclick=b.onClick;
+    wrap.appendChild(el);
+  });
+  container.appendChild(wrap);
+}
+function mkToggle(container,labelOn,labelOff,initial,onChange){
+  const wrap=document.createElement('div');
+  wrap.className='toggle-sw'+(initial?' on':'');
+  wrap.innerHTML=`<span class="dot"></span><span class="lbl">${initial?labelOn:labelOff}</span>`;
+  let on=initial;
+  wrap.onclick=()=>{
+    on=!on;
+    wrap.classList.toggle('on',on);
+    wrap.querySelector('.lbl').textContent = on?labelOn:labelOff;
+    onChange(on);
+  };
+  container.appendChild(wrap);
+  return wrap;
+}
+
+/* couleurs code résistance */
+const COLOR_NAMES=['noir','marron','rouge','orange','jaune','vert','bleu','violet','gris','blanc'];
+const COLOR_HEX=['#111','#7b4a24','#e6614f','#e88a2e','#e8d23a','#3fae5a','#3d6fe8','#8a4fd6','#9aa0a8','#f2f2f2'];
+function resistorBands(R){
+  let exp=0, val=R;
+  while(val>=100){ val/=10; exp++; }
+  while(val<10 && val!==0){ val*=10; exp--; }
+  const d1=Math.floor(val/10), d2=Math.floor(val%10);
+  return [d1,d2,exp];
+}
+
+/* ============ SIMULATIONS ============ */
+function initSim(c){
+  const controls=document.getElementById('controls');
+  const {cv,ctx}=ctxOf();
+  controls.innerHTML='';
+  if(c.simType==='ohm') return simOhm(controls,cv,ctx);
+  if(c.simType==='rc') return simRC(controls,cv,ctx);
+  if(c.simType==='rl') return simRL(controls,cv,ctx);
+  if(c.simType==='diode') return simDiode(controls,cv,ctx);
+  if(c.simType==='led') return simLed(controls,cv,ctx);
+  if(c.simType==='bjt') return simBjt(controls,cv,ctx);
+  if(c.simType==='mosfet') return simMosfet(controls,cv,ctx);
+  if(c.simType==='thyristor') return simThyristor(controls,cv,ctx);
+  if(c.simType==='logic') return simLogic(controls,cv,ctx);
+  if(c.simType==='pot') return simPot(controls,cv,ctx);
+  if(c.simType==='relay') return simRelay(controls,cv,ctx);
+  if(c.simType==='fuse') return simFuse(controls,cv,ctx);
+  if(c.simType==='battery') return simBattery(controls,cv,ctx);
+  if(c.simType==='switch') return simSwitch(controls,cv,ctx);
+  if(c.simType==='quartz') return simQuartz(controls,cv,ctx);
+}
+
+/* --- Résistance : loi d'Ohm + flux de courant animé --- */
+function simOhm(controls,cv,ctx){
+  let V=9, R=220, t=0, raf;
+  mkControl(controls,'Tension V',1,24,1,V,' V',v=>{V=v;update();});
+  mkControl(controls,'Résistance R',10,10000,10,R,' Ω',v=>{R=v;update();});
+  function update(){
+    const I=V/R, P=V*I;
+    const bands=resistorBands(R);
+    readout([
+      {l:'Courant',v:(I*1000).toFixed(1)+' mA'},
+      {l:'Puissance',v:P.toFixed(2)+' W'},
+      {l:'Bande 1',v:COLOR_NAMES[bands[0]]},
+      {l:'Bande 2',v:COLOR_NAMES[bands[1]]},
+    ]);
+  }
+  function draw(){
+    clear(ctx,cv);
+    const y=110, x1=40,x2=440;
+    ctx.strokeStyle='#22344f'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke();
+    // resistor body
+    ctx.strokeStyle='#c97c3d'; ctx.lineWidth=8; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(200,y); ctx.lineTo(280,y); ctx.stroke();
+    const bands=resistorBands(R);
+    [bands[0],bands[1],bands[2]%10].forEach((b,i)=>{
+      ctx.fillStyle=COLOR_HEX[((b%10)+10)%10];
+      ctx.fillRect(210+i*20,y-5,8,10);
+    });
+    // current dots
+    const I=V/R;
+    const speed=Math.min(Math.max(I*0.4,0.3),8);
+    t+=speed;
+    ctx.fillStyle='#5fd8cf';
+    for(let i=0;i<6;i++){
+      let px=(x1+ (t+i*70)%(x2-x1));
+      ctx.beginPath(); ctx.arc(px,y,4,0,7); ctx.fill();
+    }
+    raf=requestAnimationFrame(draw);
+  }
+  cancelAnimationFrame(window.__raf); window.__raf=raf;
+  update(); draw();
+}
+
+/* --- Condensateur : charge/décharge RC --- */
+function simRC(controls,cv,ctx){
+  let V=9,R=1000,C=100,charging=true,t0=performance.now(),raf;
+  mkControl(controls,'Tension V',1,24,1,V,' V',v=>{V=v;reset();});
+  mkControl(controls,'Résistance R',100,10000,100,R,' Ω',v=>{R=v;reset();});
+  mkControl(controls,'Capacité C',1,1000,1,C,' µF',v=>{C=v;reset();});
+  mkButtons(controls,[
+    {label:'Charger',onClick:()=>{charging=true;reset();}},
+    {label:'Décharger',ghost:true,onClick:()=>{charging=false;reset();}},
+  ]);
+  function reset(){ t0=performance.now(); }
+  function draw(){
+    clear(ctx,cv); drawAxes(ctx,cv,34);
+    const tau=(R*C)/1000; // secondes (R ohm, C µF -> tau en ms/1000)
+    const elapsed=(performance.now()-t0)/1000;
+    ctx.strokeStyle='#5fd8cf'; ctx.lineWidth=2; ctx.beginPath();
+    const w=cv.width-50, h=cv.height-50;
+    for(let px=0;px<=w;px++){
+      const tt=(px/w)*tau*5;
+      const v = charging ? V*(1-Math.exp(-tt/tau)) : V*Math.exp(-tt/tau);
+      const py = cv.height-34 - (v/V)*h;
+      if(px===0) ctx.moveTo(34+px,py); else ctx.lineTo(34+px,py);
+    }
+    ctx.stroke();
+    // curseur temps actuel
+    const curV = charging ? V*(1-Math.exp(-elapsed/tau)) : V*Math.exp(-elapsed/tau);
+    const cx = 34 + Math.min(elapsed/(tau*5),1)*w;
+    const cy = cv.height-34-(curV/V)*h;
+    ctx.fillStyle='#f2b84b'; ctx.beginPath(); ctx.arc(cx,cy,5,0,7); ctx.fill();
+    readout([{l:'τ = R×C',v:tau.toFixed(3)+' s'},{l:'Tension actuelle',v:curV.toFixed(2)+' V'}]);
+    raf=requestAnimationFrame(draw);
+  }
+  cancelAnimationFrame(window.__raf); window.__raf=raf;
+  reset(); draw();
+}
+
+/* --- Bobine : croissance du courant RL --- */
+function simRL(controls,cv,ctx){
+  let V=9,R=100,L=0.5,t0=performance.now(),raf;
+  mkControl(controls,'Tension V',1,24,1,V,' V',v=>{V=v;t0=performance.now();});
+  mkControl(controls,'Résistance R',10,1000,10,R,' Ω',v=>{R=v;t0=performance.now();});
+  mkControl(controls,'Inductance L',0.01,2,0.01,L,' H',v=>{L=v;t0=performance.now();});
+  function draw(){
+    clear(ctx,cv); drawAxes(ctx,cv,34);
+    const tau=L/R;
+    const Imax=V/R;
+    const elapsed=(performance.now()-t0)/1000;
+    const w=cv.width-50,h=cv.height-50;
+    ctx.strokeStyle='#5fd8cf';ctx.lineWidth=2;ctx.beginPath();
+    for(let px=0;px<=w;px++){
+      const tt=(px/w)*tau*5;
+      const i=Imax*(1-Math.exp(-tt/tau));
+      const py=cv.height-34-(i/Imax)*h;
+      if(px===0) ctx.moveTo(34+px,py); else ctx.lineTo(34+px,py);
+    }
+    ctx.stroke();
+    const curI=Imax*(1-Math.exp(-elapsed/tau));
+    const cx=34+Math.min(elapsed/(tau*5),1)*w, cy=cv.height-34-(curI/Imax)*h;
+    ctx.fillStyle='#f2b84b';ctx.beginPath();ctx.arc(cx,cy,5,0,7);ctx.fill();
+    readout([{l:'τ = L/R',v:(tau*1000).toFixed(1)+' ms'},{l:'Courant actuel',v:(curI*1000).toFixed(1)+' mA'},{l:'I max',v:(Imax*1000).toFixed(1)+' mA'}]);
+    raf=requestAnimationFrame(draw);
+  }
+  cancelAnimationFrame(window.__raf); window.__raf=raf;
+  draw();
+}
+
+/* --- Diode : redressement --- */
+function simDiode(controls,cv,ctx){
+  let sens='direct', t=0, raf;
+  mkSelect(controls,'Sens de branchement',[{v:'direct',l:'Sens direct (conduit)'},{v:'inverse',l:'Sens inverse (bloqué)'}],v=>sens=v);
+  function draw(){
+    clear(ctx,cv);
+    const w=cv.width-60,h=80,midIn=60,midOut=170;
+    ctx.strokeStyle='#8ea3c2';ctx.font='12px Inter';ctx.fillStyle='#8ea3c2';
+    ctx.fillText('Entrée alternative (AC)',34,20);
+    ctx.fillText('Sortie après diode',34,midOut-40);
+    // sinus entrée
+    ctx.beginPath(); ctx.strokeStyle='#5fd8cf'; ctx.lineWidth=2;
+    for(let px=0;px<=w;px++){
+      const ang=(px/w)*4*Math.PI + t;
+      const y=midIn - Math.sin(ang)*30;
+      if(px===0) ctx.moveTo(34+px,y); else ctx.lineTo(34+px,y);
+    }
+    ctx.stroke();
+    // sortie redressée
+    ctx.beginPath(); ctx.strokeStyle='#f2b84b'; ctx.lineWidth=2;
+    for(let px=0;px<=w;px++){
+      const ang=(px/w)*4*Math.PI + t;
+      let s=Math.sin(ang);
+      let y;
+      if(sens==='direct'){ y = midOut - Math.max(s,0)*30; }
+      else { y = midOut - 0; }
+      if(px===0) ctx.moveTo(34+px,y); else ctx.lineTo(34+px,y);
+    }
+    ctx.stroke();
+    t+=0.03;
+    raf=requestAnimationFrame(draw);
+  }
+  readout([{l:'Comportement',v:sens==='direct'?'Laisse passer':'Bloque'}]);
+  const origSel=controls.querySelector('select');
+  origSel.addEventListener('change',()=>readout([{l:'Comportement',v:sens==='direct'?'Laisse passer':'Bloque'}]));
+  cancelAnimationFrame(window.__raf); window.__raf=raf;
+  draw();
+}
+
+/* --- LED --- */
+function simLed(controls,cv,ctx){
+  let Vs=9, If=15, color='rouge';
+  const VF={rouge:1.8,jaune:2.0,vert:2.1,bleu:3.2};
+  mkSelect(controls,'Couleur',[{v:'rouge',l:'Rouge (1.8V)'},{v:'jaune',l:'Jaune (2.0V)'},{v:'vert',l:'Vert (2.1V)'},{v:'bleu',l:'Bleu (3.2V)'}],v=>{color=v;update();});
+  mkControl(controls,'Tension alimentation',2,24,1,Vs,' V',v=>{Vs=v;update();});
+  mkControl(controls,'Courant souhaité',2,30,1,If,' mA',v=>{If=v;update();});
+  const COL={rouge:'#e6614f',jaune:'#f2e14b',vert:'#6fcf7d',bleu:'#5f8ff2'};
+  function update(){
+    const Vf=VF[color];
+    const R=Math.max((Vs-Vf)/(If/1000),1);
+    readout([{l:'Vf',v:Vf+' V'},{l:'R série',v:Math.round(R)+' Ω'},{l:'Courant',v:If+' mA'}]);
+    draw();
+  }
+  function draw(){
+    clear(ctx,cv);
+    const cx=cv.width/2, cy=cv.height/2-10;
+    const glow=Math.min(If/30,1);
+    const grad=ctx.createRadialGradient(cx,cy,4,cx,cy,60*glow+15);
+    grad.addColorStop(0,COL[color]);
+    grad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath(); ctx.arc(cx,cy,60*glow+15,0,7); ctx.fill();
+    ctx.fillStyle=COL[color];
+    ctx.beginPath(); ctx.arc(cx,cy,14,0,7); ctx.fill();
+    ctx.strokeStyle='#8ea3c2'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx-14,cy+10); ctx.lineTo(cx-14,cy+50);
+    ctx.moveTo(cx+14,cy+10); ctx.lineTo(cx+14,cy+50); ctx.stroke();
+  }
+  update();
+}
+
+/* --- Transistor bipolaire --- */
+function simBjt(controls,cv,ctx){
+  let mode='NPN', Ib=20, beta=150;
+  mkSelect(controls,'Type',[{v:'NPN',l:'NPN'},{v:'PNP',l:'PNP'}],v=>{mode=v;update();});
+  mkControl(controls,'Courant de base Ib',0,100,1,Ib,' µA',v=>{Ib=v;update();});
+  mkControl(controls,'Gain β',50,300,10,beta,'',v=>{beta=v;update();});
+  function update(){
+    let Ic=(Ib/1e6)*beta;
+    const IcMaxSat=0.05; // 50mA saturation
+    const saturated = Ic>IcMaxSat;
+    if(saturated) Ic=IcMaxSat;
+    readout([{l:'Ic = β×Ib',v:(Ic*1000).toFixed(2)+' mA'},{l:'Mode',v:mode},{l:'État',v:saturated?'Saturé':'Linéaire'}]);
+    draw(Ic,saturated);
+  }
+  function draw(Ic,sat){
+    clear(ctx,cv);
+    const cx=cv.width/2,cy=110;
+    const glow=Math.min(Ic/0.05,1);
+    ctx.fillStyle='#f2b84b';
+    ctx.globalAlpha=0.15+glow*0.85;
+    ctx.beginPath(); ctx.arc(cx,cy,10+glow*30,0,7); ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#f2b84b';
+    ctx.beginPath(); ctx.arc(cx,cy,10,0,7); ctx.fill();
+    ctx.fillStyle='#8ea3c2'; ctx.font='13px Inter';
+    ctx.fillText('Voyant collecteur ('+mode+')',cx-70,cy+60);
+    if(sat) ctx.fillText('⚠ Transistor saturé (interrupteur fermé)',cx-110,cy+80);
+  }
+  update();
+}
+
+/* --- MOSFET --- */
+function simMosfet(controls,cv,ctx){
+  let Vgs=0; const Vth=2;
+  mkControl(controls,'Tension grille-source Vgs',0,10,0.1,Vgs,' V',v=>{Vgs=v;update();});
+  function update(){
+    const on=Vgs>Vth;
+    readout([{l:'Vth',v:Vth+' V'},{l:'État',v:on?'Passant (ON)':'Bloqué (OFF)'}]);
+    draw(on);
+  }
+  function draw(on){
+    clear(ctx,cv);
+    const cx=cv.width/2,cy=110;
+    ctx.fillStyle=on?'#6fcf7d':'#3a4a63';
+    ctx.globalAlpha=on?0.9:0.4;
+    ctx.beginPath(); ctx.arc(cx,cy,20,0,7); ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#8ea3c2'; ctx.font='13px Inter';
+    ctx.fillText(on?'LED allumée — canal conducteur':'LED éteinte — canal bloqué',cx-110,cy+50);
+  }
+  update();
+}
+
+/* --- Thyristor --- */
+function simThyristor(controls,cv,ctx){
+  let latched=false;
+  mkButtons(controls,[
+    {label:'Impulsion gâchette',onClick:()=>{latched=true;update();}},
+    {label:'Couper alimentation',ghost:true,onClick:()=>{latched=false;update();}},
+  ]);
+  function update(){
+    readout([{l:'État',v:latched?'Amorcé (conduit)':'Bloqué'}]);
+    draw();
+  }
+  function draw(){
+    clear(ctx,cv);
+    const cx=cv.width/2,cy=110;
+    ctx.fillStyle=latched?'#f2b84b':'#3a4a63';
+    ctx.beginPath(); ctx.arc(cx,cy,20,0,7); ctx.fill();
+    ctx.fillStyle='#8ea3c2'; ctx.font='13px Inter';
+    ctx.fillText(latched?'Conduit — reste allumé même sans gâchette':'Bloqué — attend une impulsion',cx-140,cy+50);
+  }
+  update();
+}
+
+/* --- Portes logiques --- */
+function simLogic(controls,cv,ctx){
+  let gate='ET', A=0, B=0;
+  mkSelect(controls,'Type de porte',[{v:'ET',l:'ET (AND)'},{v:'OU',l:'OU (OR)'},{v:'NON',l:'NON (NOT, A seul)'},{v:'NAND',l:'NON-ET (NAND)'},{v:'XOR',l:'OU-EXCLUSIF (XOR)'}],v=>{gate=v;update();});
+  mkToggle(controls,'A = 1','A = 0',false,v=>{A=v?1:0;update();});
+  mkToggle(controls,'B = 1','B = 0',false,v=>{B=v?1:0;update();});
+  function calc(a,b){
+    switch(gate){
+      case 'ET': return a&&b?1:0;
+      case 'OU': return a||b?1:0;
+      case 'NON': return a?0:1;
+      case 'NAND': return (a&&b)?0:1;
+      case 'XOR': return (a!==b)?1:0;
+    }
+  }
+  function update(){
+    const S=calc(A,B);
+    readout([{l:'A',v:A},{l:'B',v:gate==='NON'?'—':B},{l:'S',v:S}]);
+    draw(S);
+    drawTruth();
+  }
+  function draw(S){
+    clear(ctx,cv);
+    const cx=cv.width/2,cy=100;
+    ctx.fillStyle=S?'#6fcf7d':'#3a4a63';
+    ctx.beginPath(); ctx.arc(cx,cy,18,0,7); ctx.fill();
+    ctx.fillStyle='#8ea3c2'; ctx.font='13px Inter';
+    ctx.fillText('Sortie S = '+S,cx-40,cy+50);
+  }
+  function drawTruth(){
+    let box=document.getElementById('truthBox');
+    if(!box){ box=document.createElement('div'); box.id='truthBox'; document.getElementById('readout').after(box); }
+    const rows = gate==='NON' ? [[0],[1]] : [[0,0],[0,1],[1,0],[1,1]];
+    box.innerHTML = `<table class="truth-table"><tr><th>A</th>${gate==='NON'?'':'<th>B</th>'}<th>S</th></tr>${
+      rows.map(r=>{
+        const s = gate==='NON'? calc(r[0]) : calc(r[0],r[1]);
+        const active = gate==='NON' ? r[0]===A : (r[0]===A && r[1]===B);
+        return `<tr class="${active?'active':''}"><td>${r[0]}</td>${gate==='NON'?'':'<td>'+r[1]+'</td>'}<td>${s}</td></tr>`;
+      }).join('')
+    }</table>`;
+  }
+  update();
+}
+
+/* --- Potentiomètre --- */
+function simPot(controls,cv,ctx){
+  let V=9,pos=50;
+  mkControl(controls,'Tension alimentation',1,24,1,V,' V',v=>{V=v;update();});
+  mkControl(controls,'Position du curseur',0,100,1,pos,' %',v=>{pos=v;update();});
+  function update(){
+    const Vout=V*pos/100;
+    readout([{l:'Vsortie',v:Vout.toFixed(2)+' V'}]);
+    draw();
+  }
+  function draw(){
+    clear(ctx,cv);
+    const x1=60,x2=420,y=110;
+    ctx.strokeStyle='#c97c3d'; ctx.lineWidth=10; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke();
+    const cx=x1+(x2-x1)*pos/100;
+    ctx.strokeStyle='#5fd8cf'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx,y-30); ctx.lineTo(cx,y+10); ctx.stroke();
+    ctx.fillStyle='#5fd8cf'; ctx.beginPath(); ctx.arc(cx,y-30,5,0,7); ctx.fill();
+  }
+  update();
+}
+
+/* --- Relais --- */
+function simRelay(controls,cv,ctx){
+  let coilOn=false;
+  mkToggle(controls,'Bobine alimentée','Bobine au repos',false,v=>{coilOn=v;update();});
+  function update(){
+    readout([{l:'Bobine',v:coilOn?'Alimentée':'Au repos'},{l:'Contact',v:coilOn?'Fermé':'Ouvert'},{l:'Lampe (230V)',v:coilOn?'Allumée':'Éteinte'}]);
+    draw();
+  }
+  function draw(){
+    clear(ctx,cv);
+    ctx.font='12px Inter'; ctx.fillStyle='#8ea3c2';
+    ctx.fillText('Circuit commande (BF)',30,20);
+    ctx.fillText('Circuit puissance (230V)',260,20);
+    ctx.strokeStyle=coilOn?'#5fd8cf':'#3a4a63'; ctx.lineWidth=3;
+    ctx.strokeRect(30,40,90,60);
+    ctx.fillStyle='#8ea3c2'; ctx.fillText('Bobine',55,75);
+    ctx.beginPath(); ctx.moveTo(260,60); ctx.lineTo(300,60);
+    if(coilOn){ ctx.lineTo(340,60); } else { ctx.lineTo(330,40); }
+    ctx.strokeStyle='#8ea3c2'; ctx.stroke();
+    ctx.fillStyle=coilOn?'#f2b84b':'#3a4a63';
+    ctx.beginPath(); ctx.arc(400,60,18,0,7); ctx.fill();
+    ctx.fillStyle='#8ea3c2'; ctx.fillText('Lampe',388,95);
+  }
+  update();
+}
+
+/* --- Fusible --- */
+function simFuse(controls,cv,ctx){
+  let current=1, rating=2, blown=false;
+  mkControl(controls,'Courant circulant',0,10,0.1,current,' A',v=>{current=v;check();});
+  mkSelect(controls,'Calibre du fusible',[{v:'0.5',l:'0.5 A'},{v:'1',l:'1 A'},{v:'2',l:'2 A'},{v:'5',l:'5 A'}],v=>{rating=parseFloat(v);check();});
+  mkButtons(controls,[{label:'Remplacer le fusible',ghost:true,onClick:()=>{blown=false;check();}}]);
+  function check(){
+    if(current>rating) blown=true;
+    readout([{l:'Calibre',v:rating+' A'},{l:'Courant',v:current.toFixed(1)+' A'},{l:'État',v:blown?'FONDU':'Intact'}]);
+    draw();
+  }
+  function draw(){
+    clear(ctx,cv);
+    const y=110;
+    ctx.strokeStyle='#8ea3c2'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(30,y); ctx.lineTo(180,y); ctx.moveTo(300,y); ctx.lineTo(450,y); ctx.stroke();
+    ctx.strokeStyle=blown?'#e6614f':'#c97c3d'; ctx.lineWidth=3;
+    ctx.strokeRect(180,y-20,120,40);
+    ctx.beginPath();
+    if(blown){
+      ctx.moveTo(195,y); ctx.lineTo(220,y-10); ctx.lineTo(240,y+8); ctx.lineTo(260,y-6); ctx.lineTo(285,y);
+    } else {
+      ctx.moveTo(195,y); ctx.lineTo(285,y);
+    }
+    ctx.stroke();
+  }
+  check();
+}
+
+/* --- Pile / Batterie --- */
+function simBattery(controls,cv,ctx){
+  let series=1, parallel=1; const baseV=1.5, baseC=1000;
+  mkControl(controls,'Éléments en série',1,4,1,series,'',v=>{series=v;update();});
+  mkControl(controls,'Groupes en parallèle',1,3,1,parallel,'',v=>{parallel=v;update();});
+  function update(){
+    const Vt=baseV*series, Ct=baseC*parallel;
+    readout([{l:'Tension totale',v:Vt.toFixed(1)+' V'},{l:'Capacité totale',v:Ct+' mAh'}]);
+    draw();
+  }
+  function draw(){
+    clear(ctx,cv);
+    for(let p=0;p<parallel;p++){
+      let x=40;
+      for(let s=0;s<series;s++){
+        ctx.strokeStyle='#c97c3d'; ctx.lineWidth=3;
+        ctx.strokeRect(x,50+p*45,40,25);
+        ctx.fillStyle='#5fd8cf'; ctx.font='11px Inter';
+        ctx.fillText('1.5V',x+5,50+p*45+16);
+        x+=50;
+      }
+    }
+  }
+  update();
+}
+
+/* --- Interrupteur --- */
+function simSwitch(controls,cv,ctx){
+  let closed=false;
+  mkToggle(controls,'Fermé (ON)','Ouvert (OFF)',false,v=>{closed=v;update();});
+  function update(){
+    readout([{l:'État',v:closed?'Fermé':'Ouvert'},{l:'LED',v:closed?'Allumée':'Éteinte'}]);
+    draw();
+  }
+  function draw(){
+    clear(ctx,cv);
+    const y=110;
+    ctx.strokeStyle='#8ea3c2'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(30,y); ctx.lineTo(150,y); ctx.stroke();
+    ctx.beginPath();
+    if(closed){ ctx.moveTo(150,y); ctx.lineTo(230,y); } else { ctx.moveTo(150,y); ctx.lineTo(210,y-35); }
+    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(230,y); ctx.lineTo(350,y); ctx.stroke();
+    ctx.fillStyle=closed?'#f2b84b':'#3a4a63';
+    ctx.beginPath(); ctx.arc(390,y,18,0,7); ctx.fill();
+  }
+  update();
+}
+
+/* --- Quartz --- */
+function simQuartz(controls,cv,ctx){
+  let freq=5, t=0, raf;
+  mkControl(controls,'Fréquence (échelle relative)',1,20,1,freq,' MHz',v=>freq=v);
+  function draw(){
+    clear(ctx,cv); drawAxes(ctx,cv,34);
+    const w=cv.width-50;
+    ctx.strokeStyle='#5fd8cf'; ctx.lineWidth=2; ctx.beginPath();
+    for(let px=0;px<=w;px++){
+      const ang=(px/w)*freq*4 + t;
+      const y = 110 - (Math.sign(Math.sin(ang))*40);
+      if(px===0) ctx.moveTo(34+px,y); else ctx.lineTo(34+px,y);
+    }
+    ctx.stroke();
+    t+=0.05;
+    readout([{l:'Fréquence',v:freq+' MHz'}]);
+    raf=requestAnimationFrame(draw);
+  }
+  cancelAnimationFrame(window.__raf); window.__raf=raf;
+  draw();
+}
+
+/* ============ INIT ============ */
+updateHeader();
+renderBench();
+</script>
+</body>
+</html>
